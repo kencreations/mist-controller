@@ -1,0 +1,1647 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Micro-Chamber Control Center</title>
+
+        <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+        <style>
+            :root {
+                --bg: #f3f7f5;
+                --card: #ffffff;
+                --text: #1b3435;
+                --muted: #708484;
+                --line: #dae7e3;
+                --teal: #078276;
+                --green: #16865f;
+                --red: #bf4c48;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: var(--text);
+                font:
+                    14px system-ui,
+                    Arial,
+                    sans-serif;
+            }
+            main {
+                max-width: 1420px;
+                margin: auto;
+                padding: 25px;
+            }
+            header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 15px;
+                flex-wrap: wrap;
+                margin-bottom: 20px;
+            }
+            h1 {
+                font-size: 28px;
+                margin: 4px 0;
+            }
+            h2 {
+                font-size: 18px;
+                margin: 0 0 12px;
+            }
+            h3 {
+                font-size: 15px;
+                margin: 0 0 8px;
+            }
+            p,
+            small {
+                color: var(--muted);
+                line-height: 1.5;
+            }
+            .eyebrow {
+                color: var(--teal);
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.13em;
+                text-transform: uppercase;
+            }
+            .grid {
+                display: grid;
+                gap: 15px;
+            }
+            .chamberChoices {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .chamberChoice {
+                text-align: left;
+                width: 100%;
+                padding: 21px;
+                background: var(--card);
+                border: 2px solid var(--line);
+                border-radius: 15px;
+            }
+            .chamberChoice strong {
+                display: block;
+                font-size: 18px;
+                margin: 6px 0;
+            }
+            .chamberChoice small {
+                display: block;
+                font-weight: 400;
+            }
+            .chamberChoice.active {
+                border-color: var(--teal);
+                background: #eaf7f3;
+            }
+            @media (max-width: 550px) {
+                .chamberChoices {
+                    grid-template-columns: 1fr;
+                }
+            }
+            .metrics {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+            .two {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .card {
+                background: var(--card);
+                border: 1px solid var(--line);
+                border-radius: 15px;
+                padding: 19px;
+                box-shadow: 0 5px 18px #122d2810;
+                min-width: 0;
+            }
+            section {
+                margin-bottom: 16px;
+            }
+            .metric {
+                font-size: 30px;
+                font-weight: 800;
+                margin: 8px 0;
+            }
+            .label {
+                color: var(--muted);
+                font-size: 12px;
+                font-weight: 700;
+            }
+            .row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                margin: 12px 0;
+                flex-wrap: wrap;
+            }
+            .actions {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            button,
+            input,
+            select {
+                font: inherit;
+            }
+            button {
+                border: 1px solid var(--line);
+                border-radius: 9px;
+                background: white;
+                color: var(--text);
+                padding: 10px 14px;
+                font-weight: 700;
+                cursor: pointer;
+            }
+            button:disabled {
+                opacity: 0.45;
+                cursor: not-allowed;
+            }
+            button:hover:not(:disabled) {
+                background: #eef7f4;
+            }
+            .primary {
+                background: var(--teal);
+                color: white;
+            }
+            .primary:hover:not(:disabled) {
+                background: #076c63;
+            }
+            .danger {
+                border-color: #efc8c5;
+                color: var(--red);
+            }
+            input,
+            select {
+                border: 1px solid #ccdcd7;
+                border-radius: 9px;
+                padding: 10px;
+                background: #fff;
+                color: var(--text);
+                max-width: 100%;
+                min-width: 0;
+            }
+            input[type="number"] {
+                width: 100%;
+            }
+            input[type="email"],
+            input[type="password"] {
+                width: 100%;
+            }
+            .tag {
+                display: inline-block;
+                background: #edf2f1;
+                color: #58706d;
+                border-radius: 8px;
+                padding: 6px 10px;
+                font-size: 12px;
+                font-weight: 750;
+            }
+            .tag.on {
+                background: #dff7ec;
+                color: var(--green);
+            }
+            .tag.warn {
+                background: #fff0d8;
+                color: #9b6528;
+            }
+            .tag.bad {
+                background: #ffe9e8;
+                color: var(--red);
+            }
+            .notice {
+                background: #fff7e9;
+                border: 1px solid #f0d9ad;
+                padding: 13px;
+                border-radius: 11px;
+                margin-bottom: 17px;
+                line-height: 1.6;
+                color: #88612c;
+            }
+            .scenario {
+                background: #e9f7f1;
+                border: 1px solid #c9e8dc;
+                border-radius: 12px;
+                padding: 16px;
+                margin-bottom: 15px;
+            }
+            .scenario strong {
+                font-size: 22px;
+            }
+            .relayCard {
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                padding: 15px;
+                margin-top: 12px;
+                background: #f9fbfa;
+            }
+            .relayCard p {
+                margin: 6px 0 12px;
+                font-size: 12px;
+            }
+            .relayCard .actions {
+                margin-top: 10px;
+            }
+            .formGrid {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 15px;
+            }
+            .pair {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .chart {
+                height: 300px;
+            }
+            .tableWrap {
+                overflow: auto;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                min-width: 740px;
+            }
+            td,
+            th {
+                padding: 11px;
+                text-align: left;
+                font-size: 12px;
+                border-bottom: 1px solid var(--line);
+            }
+            th {
+                background: #f7faf9;
+                color: var(--muted);
+            }
+            .hidden {
+                display: none !important;
+            }
+            .filter {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            .statusLine {
+                font-size: 12px;
+                color: var(--muted);
+                margin-top: 12px;
+            }
+            footer {
+                color: var(--muted);
+                padding: 20px 0;
+            }
+            @media (max-width: 1000px) {
+                .metrics {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                .two,
+                .formGrid {
+                    grid-template-columns: 1fr;
+                }
+            }
+            @media (max-width: 550px) {
+                main {
+                    padding: 13px;
+                }
+                h1 {
+                    font-size: 23px;
+                }
+                .metric {
+                    font-size: 23px;
+                }
+                .card {
+                    padding: 15px;
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <main>
+            <header>
+                <div>
+                    <div class="eyebrow">
+                        Appendix B · Environmental Monitoring
+                    </div>
+                    <h1>Micro-Chamber Control Center</h1>
+                    <p>Automated control and traditional chamber monitoring</p>
+                </div>
+                <div class="actions">
+                    <span id="connection" class="tag warn">Connecting...</span>
+                    <button id="exportCSV">Export CSV</button>
+                </div>
+            </header>
+
+            <section class="grid chamberChoices" aria-label="Chamber selection">
+                <button
+                    class="chamberChoice active"
+                    id="automatedCard"
+                    type="button"
+                    aria-pressed="true"
+                >
+                    <span class="eyebrow">CONTROL & MONITORING</span>
+                    <strong>Automated Chamber</strong>
+                    <small
+                        >Live sensors, Appendix B, relay testing, LED settings,
+                        history and CSV export.</small
+                    >
+                </button>
+                <button
+                    class="chamberChoice"
+                    id="traditionalCard"
+                    type="button"
+                    aria-pressed="false"
+                >
+                    <span class="eyebrow">MONITORING ONLY</span>
+                    <strong>Traditional Chamber</strong>
+                    <small
+                        >SHT31 / SCD40 live measurements, history, graphs and
+                        CSV export. No actuators.</small
+                    >
+                </button>
+            </section>
+
+            <div class="notice" id="automatedNotice">
+                Monitoring is read-only for visitors. Actuator tests require an
+                authorized operator account. Remote tests are temporary and do
+                not verify electrical or physical actuator operation. Do not
+                connect unverified loads during initial testing.
+            </div>
+
+            <section class="grid metrics">
+                <div class="card">
+                    <div class="label">SHT31 · Temperature</div>
+                    <div class="metric"><span id="temp">--</span> °C</div>
+                    <small id="tempLabel">Waiting for data</small>
+                </div>
+                <div class="card">
+                    <div class="label">SHT31 · Humidity</div>
+                    <div class="metric"><span id="rh">--</span> %</div>
+                    <small id="rhLabel">Waiting for data</small>
+                </div>
+                <div class="card">
+                    <div class="label">SCD40 · CO₂</div>
+                    <div class="metric"><span id="co2">--</span> ppm</div>
+                    <small id="co2Label">Waiting for sensor</small>
+                </div>
+                <div class="card">
+                    <div class="label">Last Reading</div>
+                    <div class="metric" style="font-size: 18px" id="lastSeen">
+                        --
+                    </div>
+                    <small id="lastAge">Waiting for telemetry</small>
+                </div>
+            </section>
+
+            <section class="grid two" id="automatedControls">
+                <article class="card">
+                    <h2>Current Environmental Demand</h2>
+
+                    <div class="scenario">
+                        <div class="eyebrow">Appendix B scenario</div>
+                        <strong id="scenario">--</strong>
+                        <p id="rationale">Waiting for sensor readings</p>
+                    </div>
+
+                    <div class="row">
+                        <span>Exhaust Fan Demand</span>
+                        <span class="tag" id="exhaustDemand">--</span>
+                    </div>
+
+                    <div class="row">
+                        <span>Intake Fan Demand</span>
+                        <span class="tag" id="intakeDemand">--</span>
+                    </div>
+
+                    <div class="row">
+                        <span>Mist Demand</span>
+                        <span class="tag" id="mistDemand">--</span>
+                    </div>
+
+                    <div class="row">
+                        <span>Exhaust Relay Output</span>
+                        <span class="tag" id="exhaustActive">--</span>
+                    </div>
+
+                    <div class="row">
+                        <span>Intake Relay Output</span>
+                        <span class="tag" id="intakeActive">--</span>
+                    </div>
+
+                    <div class="row">
+                        <span>LED Relay Output</span>
+                        <span class="tag" id="ledActive">--</span>
+                    </div>
+
+                    <div class="row">
+                        <span>Mist Button Relay Contact</span>
+                        <span class="tag" id="mistActive">--</span>
+                    </div>
+
+                    <div class="statusLine" id="phase">
+                        Controller phase: --
+                    </div>
+                    <p>
+                        Mist demand is calculated automatically, but
+                        button-driven mist activation remains disabled until
+                        controller feedback is available.
+                    </p>
+                </article>
+
+                <article class="card">
+                    <h2>Relay Test Center</h2>
+
+                    <div class="row">
+                        <span>Operator</span>
+                        <span id="authStatus" class="tag warn"
+                            >Not signed in</span
+                        >
+                    </div>
+
+                    <div id="loginBox" class="relayCard">
+                        <h3>Operator sign-in</h3>
+                        <div class="grid" style="gap: 8px">
+                            <input
+                                id="operatorEmail"
+                                type="email"
+                                placeholder="Operator email"
+                            />
+                            <input
+                                id="operatorPassword"
+                                type="password"
+                                placeholder="Password"
+                            />
+                            <button id="loginBtn" class="primary">
+                                Sign in
+                            </button>
+                        </div>
+                        <p id="loginMessage">
+                            Visitors do not need an account.
+                        </p>
+                    </div>
+
+                    <div class="row">
+                        <span>ESP32 controller</span>
+                        <span id="deviceStatus" class="tag warn"
+                            >Waiting for heartbeat</span
+                        >
+                    </div>
+
+                    <div class="relayCard">
+                        <h3>Relay 1 · Exhaust Fan</h3>
+                        <div class="actions">
+                            <button
+                                class="primary testBtn"
+                                data-action="EXHAUST_ON"
+                                disabled
+                            >
+                                Test ON · 3s
+                            </button>
+                            <button
+                                class="testBtn"
+                                data-action="EXHAUST_OFF"
+                                disabled
+                            >
+                                Test OFF · 3s
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relayCard">
+                        <h3>Relay 2 · LED Light</h3>
+                        <p>Manual test overrides the schedule temporarily.</p>
+                        <div class="actions">
+                            <button
+                                class="primary testBtn"
+                                data-action="LED_ON"
+                                disabled
+                            >
+                                Test ON · 3s
+                            </button>
+                            <button
+                                class="testBtn"
+                                data-action="LED_OFF"
+                                disabled
+                            >
+                                Test OFF · 3s
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relayCard">
+                        <h3>Relay 3 · Intake Fan</h3>
+                        <div class="actions">
+                            <button
+                                class="primary testBtn"
+                                data-action="INTAKE_ON"
+                                disabled
+                            >
+                                Test ON · 3s
+                            </button>
+                            <button
+                                class="testBtn"
+                                data-action="INTAKE_OFF"
+                                disabled
+                            >
+                                Test OFF · 3s
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relayCard">
+                        <h3>Relay 4 · Mist Controller</h3>
+                        <p>
+                            One 180ms button press, three-second pause, then two
+                            additional presses. Verify the controller starts
+                            OFF.
+                        </p>
+                        <button
+                            class="danger testBtn"
+                            data-action="MIST_CYCLE"
+                            disabled
+                        >
+                            Run 1 + 2 Press Test
+                        </button>
+                    </div>
+
+                    <p id="commandMessage" class="statusLine">
+                        Sign in as the operator to enable relay testing.
+                    </p>
+
+                    <button id="logoutBtn" class="hidden">Sign out</button>
+                </article>
+            </section>
+
+            <section class="card" id="automatedSchedule">
+                <div class="row">
+                    <div>
+                        <h2>LED Lighting Schedule</h2>
+                        <small
+                            >Philippine time · 12 hours ON, 12 hours OFF</small
+                        >
+                    </div>
+                    <span id="scheduleStatus" class="tag">06:00–18:00</span>
+                </div>
+
+                <div class="grid two">
+                    <div>
+                        <label class="label">LED ON time</label>
+                        <input type="time" id="ledStart" value="06:00" />
+                    </div>
+                    <div>
+                        <label class="label">LED OFF time</label>
+                        <input type="time" id="ledEnd" value="18:00" />
+                    </div>
+                </div>
+
+                <p>
+                    Changing either time automatically moves the other time 12
+                    hours away. Save settings to apply the new schedule.
+                </p>
+                <small id="ledClockMessage">
+                    Actual LED state depends on the ESP32's clock
+                    synchronization.
+                </small>
+            </section>
+
+            <section class="card" id="automatedSettings">
+                <h2>System Settings</h2>
+
+                <form id="settingsForm">
+                    <div class="formGrid">
+                        <div>
+                            <label class="label">Temperature Range °C</label>
+                            <div class="pair">
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    id="tempLow"
+                                    placeholder="Low"
+                                    required
+                                />
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    id="tempHigh"
+                                    placeholder="High"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="label">Humidity Range %</label>
+                            <div class="pair">
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    id="rhOn"
+                                    placeholder="Mist ON below"
+                                    required
+                                />
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    id="rhOff"
+                                    placeholder="Mist OFF at"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="label">CO₂ Hysteresis ppm</label>
+                            <div class="pair">
+                                <input
+                                    type="number"
+                                    step="1"
+                                    id="co2Reset"
+                                    placeholder="Reset"
+                                    required
+                                />
+                                <input
+                                    type="number"
+                                    step="1"
+                                    id="co2Trigger"
+                                    placeholder="Trigger"
+                                    required
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <span id="saveMessage"
+                            >Changes require operator access.</span
+                        >
+                        <button
+                            class="primary"
+                            id="saveBtn"
+                            type="submit"
+                            disabled
+                        >
+                            Save Settings and LED Schedule
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="card">
+                <div class="row">
+                    <div>
+                        <h2 id="historyHeading">
+                            Automated Chamber Historical Data
+                        </h2>
+                        <small
+                            >Daily, weekly, monthly or custom date range
+                            (PHT)</small
+                        >
+                    </div>
+                    <div class="filter">
+                        <select id="period">
+                            <option value="day">Daily</option>
+                            <option value="week">Weekly</option>
+                            <option value="month">Monthly</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        <input type="date" id="anchorDate" />
+                        <input type="date" id="fromDate" class="hidden" />
+                        <input type="date" id="toDate" class="hidden" />
+                        <button class="primary" id="loadHistory">Apply</button>
+                    </div>
+                </div>
+
+                <div class="grid metrics">
+                    <div>
+                        <div class="label">Records</div>
+                        <div class="metric" id="records">0</div>
+                    </div>
+                    <div>
+                        <div class="label">Avg Temperature</div>
+                        <div class="metric" id="avgTemp">--</div>
+                    </div>
+                    <div>
+                        <div class="label">Avg Humidity</div>
+                        <div class="metric" id="avgRH">--</div>
+                    </div>
+                    <div>
+                        <div class="label">Avg CO₂</div>
+                        <div class="metric" id="avgCO2">--</div>
+                    </div>
+                </div>
+
+                <div class="chart"><canvas id="historyChart"></canvas></div>
+                <p id="historyMessage"></p>
+            </section>
+
+            <section class="card">
+                <h2 id="recentHeading">Recent Automated Measurements</h2>
+                <div class="tableWrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time (PHT)</th>
+                                <th>Temperature</th>
+                                <th>Humidity</th>
+                                <th>CO₂</th>
+                                <th class="automatedColumn">Scenario</th>
+                                <th class="automatedColumn">Exhaust</th>
+                                <th class="automatedColumn">Intake</th>
+                                <th class="automatedColumn">LED</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyRows"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <footer>
+                Micro-Chamber Research Dashboard · Firebase RTDB · UTC+8
+            </footer>
+        </main>
+
+        <script>
+            // =====================================================
+            // FIREBASE INITIALIZATION
+            // =====================================================
+
+            firebase.initializeApp({
+                apiKey: "AIzaSyAq8qFUA6gxMV4dAi1v3FU_l4XJWl1qF4M",
+                authDomain: "auto-micro-chamber.firebaseapp.com",
+                databaseURL:
+                    "https://auto-micro-chamber-default-rtdb.asia-southeast1.firebasedatabase.app",
+                projectId: "auto-micro-chamber",
+            });
+
+            const db = firebase.database();
+            const auth = firebase.auth();
+            const $ = (id) => document.getElementById(id);
+
+            let latest = null;
+            let activeChamber = "automated";
+            const chamberPaths = {
+                automated: {
+                    latest: "/chamber/latest",
+                    history: "/chamber/automated",
+                },
+                traditional: {
+                    latest: "/traditional/latest",
+                    history: "/traditional/history",
+                },
+            };
+            const latestReadings = { automated: null, traditional: null };
+            let historyRecords = [];
+            let historyLoadSerial = 0;
+            let controllerStatus = null;
+            let operator = null;
+            let busy = false;
+            let pendingId = "";
+            let timeoutId = null;
+
+            const defaults = {
+                TEMP_LOW: 25,
+                TEMP_HIGH: 28,
+                RH_ON: 85,
+                RH_OFF: 95,
+                CO2_RESET: 780,
+                CO2_TRIGGER: 800,
+                LED_ON_MIN: 360,
+                LED_OFF_MIN: 1080,
+            };
+
+            const scenarioNames = {
+                A: "All High",
+                B: "Hot & Dry",
+                C: "High CO₂ Only",
+                D: "Optimal",
+                E: "Hot and Humid",
+                F: "Hot, Dry, High CO₂",
+                G: "Cold, Humid, Stagnant",
+                H: "Cold, Dry, High CO₂",
+                OTHER: "Unlisted Condition",
+                CO2_UNAVAILABLE: "CO₂ Unavailable",
+                SENSOR_FAULT: "Sensor Fault",
+            };
+
+            const finite = (x) =>
+                x !== null &&
+                x !== undefined &&
+                x !== "" &&
+                Number.isFinite(Number(x));
+
+            const fmt = (x, dec = 1) =>
+                finite(x) ? Number(x).toFixed(dec) : "--";
+
+            const validCO2 = (r) => r && r.co2Valid === true && finite(r.co2);
+
+            const pht = (ts) =>
+                new Date(Number(ts)).toLocaleString("en-PH", {
+                    timeZone: "Asia/Manila",
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                });
+
+            function tag(id, value) {
+                const el = $(id);
+                const unknown = typeof value !== "boolean";
+
+                el.className = "tag " + (unknown ? "warn" : value ? "on" : "");
+                el.textContent = unknown ? "Unknown" : value ? "ON" : "OFF";
+            }
+
+            // =====================================================
+            // LIVE READINGS
+            // =====================================================
+
+            function renderLive() {
+                latest = latestReadings[activeChamber];
+                if (!latest) {
+                    for (const id of ["temp", "rh", "co2", "lastSeen"])
+                        $(id).textContent = "--";
+                    $("tempLabel").textContent = "Waiting for data";
+                    $("rhLabel").textContent = "Waiting for data";
+                    $("co2Label").textContent = "Waiting for sensor";
+                    $("lastAge").textContent = "Waiting for telemetry";
+                    $("connection").textContent =
+                        "Waiting for " + activeChamber + " chamber";
+                    $("connection").className = "tag warn";
+                    return;
+                }
+                const r = latest;
+                const sensorOK = r.sensorValid === true;
+
+                $("temp").textContent = sensorOK ? fmt(r.temp, 2) : "--";
+                $("rh").textContent = sensorOK ? fmt(r.rh, 2) : "--";
+                $("co2").textContent = validCO2(r) ? fmt(r.co2, 0) : "--";
+
+                $("tempLabel").textContent = sensorOK
+                    ? "SHT31 measured temperature"
+                    : "Sensor unavailable";
+
+                $("rhLabel").textContent = sensorOK
+                    ? "SHT31 measured humidity"
+                    : "Sensor unavailable";
+
+                $("co2Label").textContent = validCO2(r)
+                    ? "SCD40 valid reading"
+                    : "CO₂ unavailable";
+
+                if (activeChamber === "traditional") {
+                    // Traditional mode never renders automated control states.
+                    const age = Date.now() - Number(r.timestamp || 0);
+                    const stale =
+                        !finite(r.timestamp) || age > 45000 || age < -30000;
+                    $("lastSeen").textContent = finite(r.timestamp)
+                        ? pht(r.timestamp)
+                        : "--";
+                    $("lastAge").textContent = stale
+                        ? "Telemetry stale"
+                        : Math.floor(age / 1000) + " seconds ago";
+                    $("connection").textContent = stale
+                        ? "Traditional ESP32 stale / offline"
+                        : "Traditional ESP32 telemetry online";
+                    $("connection").className = "tag " + (stale ? "bad" : "on");
+                    return;
+                }
+
+                $("scenario").textContent =
+                    (r.scenario || "UNKNOWN") +
+                    " · " +
+                    (scenarioNames[r.scenario] || "Unknown");
+
+                $("rationale").textContent = r.rationale || "No rationale";
+
+                tag("exhaustDemand", r.exhaustDemand);
+                tag("intakeDemand", r.intakeDemand);
+                tag("mistDemand", r.mistDemand);
+
+                tag("exhaustActive", r.exhaustActive);
+                tag("intakeActive", r.intakeActive);
+                tag("ledActive", r.ledActive);
+                tag("mistActive", r.mistActive);
+
+                $("phase").textContent =
+                    "Controller phase: " + (r.phase || "UNKNOWN");
+
+                $("lastSeen").textContent = finite(r.timestamp)
+                    ? pht(r.timestamp)
+                    : "--";
+
+                const age = Date.now() - Number(r.timestamp || 0);
+                const stale = age > 45000 || age < 0;
+
+                $("lastAge").textContent = stale
+                    ? "Telemetry stale"
+                    : Math.floor(age / 1000) + " seconds ago";
+
+                $("connection").textContent = stale
+                    ? "ESP32 stale / offline"
+                    : "ESP32 telemetry online";
+
+                $("connection").className = "tag " + (stale ? "bad" : "on");
+
+                $("ledClockMessage").textContent =
+                    r.clockValid === false
+                        ? "ESP32 clock not synchronized; LED schedule OFF"
+                        : "LED follows its configured Philippine-time schedule";
+            }
+
+            db.ref(chamberPaths.automated.latest).on(
+                "value",
+                (snap) => {
+                    latestReadings.automated = snap.val();
+                    renderLive();
+                },
+                (err) => {
+                    $("connection").textContent = "Firebase read error";
+                    console.error(err);
+                },
+            );
+
+            db.ref(chamberPaths.traditional.latest).on(
+                "value",
+                (snap) => {
+                    latestReadings.traditional = snap.val();
+                    renderLive();
+                },
+                (err) => console.error("Traditional live read failed:", err),
+            );
+
+            function switchChamber(mode) {
+                if (!chamberPaths[mode]) return;
+                activeChamber = mode;
+                ++historyLoadSerial; // Invalidate any in-flight history request.
+                for (const name of ["automated", "traditional"]) {
+                    const el = $(name + "Card");
+                    el.classList.toggle("active", name === mode);
+                    el.setAttribute("aria-pressed", String(name === mode));
+                }
+                for (const id of [
+                    "automatedNotice",
+                    "automatedControls",
+                    "automatedSchedule",
+                    "automatedSettings",
+                ]) {
+                    $(id).classList.toggle("hidden", mode !== "automated");
+                }
+                document.querySelectorAll(".automatedColumn").forEach((el) => {
+                    el.classList.toggle("hidden", mode !== "automated");
+                });
+                $("historyHeading").textContent =
+                    mode === "automated"
+                        ? "Automated Chamber Historical Data"
+                        : "Traditional Chamber Historical Data";
+                $("recentHeading").textContent =
+                    mode === "automated"
+                        ? "Recent Automated Measurements"
+                        : "Recent Traditional Measurements";
+                historyRecords = [];
+                $("historyRows").replaceChildren();
+                $("records").textContent = "0";
+                for (const id of ["avgTemp", "avgRH", "avgCO2"])
+                    $(id).textContent = "--";
+                chart.data.labels = [];
+                chart.data.datasets = [];
+                chart.update();
+                renderLive();
+                void loadHistory();
+            }
+            $("automatedCard").addEventListener("click", () =>
+                switchChamber("automated"),
+            );
+            $("traditionalCard").addEventListener("click", () =>
+                switchChamber("traditional"),
+            );
+            setInterval(renderLive, 10000);
+
+            // =====================================================
+            // OPERATOR AUTHENTICATION
+            // =====================================================
+
+            function deviceOnline() {
+                if (!controllerStatus) return false;
+
+                const age =
+                    Date.now() - Number(controllerStatus.timestamp || 0);
+
+                return age >= 0 && age < 45000;
+            }
+
+            function updateControls() {
+                const ready = !!operator && deviceOnline() && !busy;
+
+                document
+                    .querySelectorAll(".testBtn")
+                    .forEach((b) => (b.disabled = !ready));
+
+                $("saveBtn").disabled = !operator;
+
+                $("deviceStatus").textContent = deviceOnline()
+                    ? "ESP32 ready"
+                    : "ESP32 offline / stale";
+
+                $("deviceStatus").className =
+                    "tag " + (deviceOnline() ? "on" : "warn");
+            }
+
+            auth.onAuthStateChanged((user) => {
+                operator = user;
+
+                $("loginBox").classList.toggle("hidden", !!user);
+                $("logoutBtn").classList.toggle("hidden", !user);
+
+                $("authStatus").textContent = user
+                    ? "Signed in: " + user.email
+                    : "Not signed in";
+
+                $("authStatus").className = "tag " + (user ? "on" : "warn");
+
+                updateControls();
+            });
+
+            $("loginBtn").addEventListener("click", async () => {
+                const email = $("operatorEmail").value.trim();
+                const pass = $("operatorPassword").value;
+
+                $("loginMessage").textContent = "Signing in...";
+
+                try {
+                    await auth.signInWithEmailAndPassword(email, pass);
+                    $("operatorPassword").value = "";
+                    $("loginMessage").textContent = "";
+                } catch (e) {
+                    $("loginMessage").textContent = e.message;
+                }
+            });
+
+            $("logoutBtn").addEventListener("click", () => {
+                auth.signOut();
+            });
+
+            db.ref("/chamber/control/status").on(
+                "value",
+                (snap) => {
+                    controllerStatus = snap.val();
+
+                    const s = controllerStatus;
+                    if (!s) {
+                        updateControls();
+                        return;
+                    }
+
+                    if (pendingId && s.id === pendingId) {
+                        if (s.result === "COMPLETED") {
+                            finishRequest("ESP32 completed the test.");
+                        } else if (s.result === "REJECTED") {
+                            finishRequest("ESP32 rejected the command.");
+                        }
+                    }
+
+                    updateControls();
+                },
+                console.error,
+            );
+
+            setInterval(updateControls, 1000);
+
+            // =====================================================
+            // MANUAL RELAY COMMANDS
+            // =====================================================
+
+            function commandId() {
+                return crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : Date.now() + "-" + Math.random().toString(36).slice(2);
+            }
+
+            function finishRequest(message) {
+                clearTimeout(timeoutId);
+
+                busy = false;
+                pendingId = "";
+
+                $("commandMessage").textContent = message;
+                updateControls();
+            }
+
+            async function sendCommand(action) {
+                if (!operator || !deviceOnline() || busy) return;
+
+                busy = true;
+                pendingId = commandId();
+                updateControls();
+
+                $("commandMessage").textContent = "Sending " + action + "...";
+
+                const data = {
+                    id: pendingId,
+                    action,
+                    issuedAt: firebase.database.ServerValue.TIMESTAMP,
+                };
+
+                try {
+                    await db.ref("/chamber/control/request").set(data);
+
+                    $("commandMessage").textContent =
+                        "Firebase accepted command. Awaiting ESP32.";
+
+                    timeoutId = setTimeout(() => {
+                        if (busy)
+                            finishRequest(
+                                "No completed response. Check ESP32 Serial Monitor.",
+                            );
+                    }, 20000);
+                } catch (e) {
+                    finishRequest("Command failed: " + e.message);
+                }
+            }
+
+            document.querySelectorAll(".testBtn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const action = btn.dataset.action;
+
+                    if (action === "MIST_CYCLE") {
+                        if (
+                            !confirm(
+                                "Confirm the mist controller is OFF and its " +
+                                    "button contacts are safe to bridge. " +
+                                    "Run the 1 + 2 button sequence?",
+                            )
+                        )
+                            return;
+                    }
+
+                    void sendCommand(action);
+                });
+            });
+
+            // =====================================================
+            // SETTINGS / LED SCHEDULE
+            // =====================================================
+
+            const fields = {
+                TEMP_LOW: "tempLow",
+                TEMP_HIGH: "tempHigh",
+                RH_ON: "rhOn",
+                RH_OFF: "rhOff",
+                CO2_RESET: "co2Reset",
+                CO2_TRIGGER: "co2Trigger",
+            };
+
+            function toTime(minutes) {
+                return (
+                    String(Math.floor(minutes / 60)).padStart(2, "0") +
+                    ":" +
+                    String(minutes % 60).padStart(2, "0")
+                );
+            }
+
+            function toMinutes(time) {
+                const [h, m] = time.split(":").map(Number);
+                return h * 60 + m;
+            }
+
+            function updateScheduleLabel() {
+                $("scheduleStatus").textContent =
+                    $("ledStart").value + "–" + $("ledEnd").value;
+            }
+
+            $("ledStart").addEventListener("change", () => {
+                if (!$("ledStart").value) return;
+
+                const start = toMinutes($("ledStart").value);
+                $("ledEnd").value = toTime((start + 720) % 1440);
+                updateScheduleLabel();
+            });
+
+            $("ledEnd").addEventListener("change", () => {
+                if (!$("ledEnd").value) return;
+
+                const end = toMinutes($("ledEnd").value);
+                $("ledStart").value = toTime((end + 720) % 1440);
+                updateScheduleLabel();
+            });
+
+            db.ref("/chamber/settings").on(
+                "value",
+                (snap) => {
+                    const s = { ...defaults, ...(snap.val() || {}) };
+
+                    for (const [key, id] of Object.entries(fields)) {
+                        if (document.activeElement !== $(id))
+                            $(id).value = s[key];
+                    }
+
+                    if (document.activeElement !== $("ledStart"))
+                        $("ledStart").value = toTime(s.LED_ON_MIN);
+
+                    if (document.activeElement !== $("ledEnd"))
+                        $("ledEnd").value = toTime(s.LED_OFF_MIN);
+
+                    updateScheduleLabel();
+                },
+                console.error,
+            );
+
+            $("settingsForm").addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                if (!operator) {
+                    $("saveMessage").textContent = "Operator sign-in required";
+                    return;
+                }
+
+                const s = {};
+
+                for (const [key, id] of Object.entries(fields))
+                    s[key] = Number($(id).value);
+
+                s.LED_ON_MIN = toMinutes($("ledStart").value);
+                s.LED_OFF_MIN = toMinutes($("ledEnd").value);
+
+                const valid =
+                    Object.values(s).every(Number.isFinite) &&
+                    s.TEMP_LOW >= 0 &&
+                    s.TEMP_HIGH <= 60 &&
+                    s.TEMP_LOW < s.TEMP_HIGH &&
+                    s.RH_ON >= 0 &&
+                    s.RH_OFF <= 100 &&
+                    s.RH_ON < s.RH_OFF &&
+                    s.CO2_RESET >= 0 &&
+                    s.CO2_TRIGGER <= 10000 &&
+                    s.CO2_RESET < s.CO2_TRIGGER &&
+                    s.LED_ON_MIN >= 0 &&
+                    s.LED_ON_MIN < 1440 &&
+                    s.LED_OFF_MIN >= 0 &&
+                    s.LED_OFF_MIN < 1440 &&
+                    (s.LED_OFF_MIN - s.LED_ON_MIN + 1440) % 1440 === 720;
+
+                if (!valid) {
+                    $("saveMessage").textContent = "Invalid settings";
+                    return;
+                }
+
+                try {
+                    await db.ref("/chamber/settings").set(s);
+                    $("saveMessage").textContent =
+                        "Settings saved. ESP32 applies shortly.";
+                } catch (err) {
+                    $("saveMessage").textContent =
+                        "Save failed: " + err.message;
+                }
+            });
+
+            // =====================================================
+            // HISTORY AND CSV EXPORT
+            // =====================================================
+
+            function dayString(ms = Date.now()) {
+                return new Date(ms + 8 * 3600000).toISOString().slice(0, 10);
+            }
+
+            function dayStart(s) {
+                return new Date(s + "T00:00:00+08:00").getTime();
+            }
+
+            function addDays(s, d) {
+                return dayString(dayStart(s) + d * 86400000);
+            }
+
+            function getBounds() {
+                const period = $("period").value;
+                const anchor = $("anchorDate").value;
+
+                if (period === "custom") {
+                    const a = $("fromDate").value;
+                    const b = $("toDate").value;
+
+                    if (!a || !b || b < a)
+                        throw new Error("Select a valid custom range");
+
+                    return [dayStart(a), dayStart(addDays(b, 1))];
+                }
+
+                if (period === "day")
+                    return [dayStart(anchor), dayStart(addDays(anchor, 1))];
+
+                if (period === "week") {
+                    const dow =
+                        (new Date(dayStart(anchor)).getUTCDay() + 6) % 7;
+                    const monday = addDays(anchor, -dow);
+
+                    return [dayStart(monday), dayStart(addDays(monday, 7))];
+                }
+
+                const first = anchor.slice(0, 7) + "-01";
+                const [year, month] = first.split("-").map(Number);
+
+                const next =
+                    month === 12
+                        ? year + 1 + "-01-01"
+                        : year +
+                          "-" +
+                          String(month + 1).padStart(2, "0") +
+                          "-01";
+
+                return [dayStart(first), dayStart(next)];
+            }
+
+            function average(records, key, filter = () => true) {
+                const a = records
+                    .filter(filter)
+                    .map((r) => r[key])
+                    .filter(finite)
+                    .map(Number);
+
+                return a.length
+                    ? a.reduce((sum, v) => sum + v, 0) / a.length
+                    : null;
+            }
+
+            const chart = new Chart($("historyChart"), {
+                type: "line",
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    interaction: { mode: "index", intersect: false },
+                    plugins: { legend: { position: "bottom" } },
+                    scales: {
+                        x: { ticks: { maxTicksLimit: 8 } },
+                        y: { position: "left" },
+                        co2: {
+                            position: "right",
+                            display: false,
+                            grid: { drawOnChartArea: false },
+                        },
+                    },
+                },
+            });
+
+            function renderHistory() {
+                const step = Math.max(
+                    1,
+                    Math.ceil(historyRecords.length / 500),
+                );
+
+                const sampled = historyRecords.filter(
+                    (_, i) => i % step === 0 || i === historyRecords.length - 1,
+                );
+
+                chart.data.labels = sampled.map((r) => pht(r.timestamp));
+
+                chart.data.datasets = [
+                    {
+                        label: "Temperature °C",
+                        data: sampled.map((r) =>
+                            r.sensorValid ? r.temp : null,
+                        ),
+                        borderColor: "#da7437",
+                        pointRadius: 0,
+                        yAxisID: "y",
+                    },
+                    {
+                        label: "Humidity %",
+                        data: sampled.map((r) => (r.sensorValid ? r.rh : null)),
+                        borderColor: "#427cb7",
+                        pointRadius: 0,
+                        yAxisID: "y",
+                    },
+                    {
+                        label: "CO₂ ppm",
+                        data: sampled.map((r) => (validCO2(r) ? r.co2 : null)),
+                        borderColor: "#078276",
+                        pointRadius: 0,
+                        yAxisID: "co2",
+                        spanGaps: false,
+                    },
+                ];
+
+                chart.options.scales.co2.display = sampled.some(validCO2);
+                chart.update();
+
+                $("historyRows").replaceChildren();
+
+                const recent = historyRecords.slice(-12).reverse();
+
+                for (const r of recent) {
+                    const tr = document.createElement("tr");
+
+                    const values = [
+                        pht(r.timestamp),
+                        r.sensorValid ? fmt(r.temp, 2) : "--",
+                        r.sensorValid ? fmt(r.rh, 2) : "--",
+                        validCO2(r) ? fmt(r.co2, 0) : "--",
+                    ];
+                    if (activeChamber === "automated")
+                        values.push(
+                            r.scenario || "--",
+                            r.exhaustActive === true
+                                ? "ON"
+                                : r.exhaustActive === false
+                                  ? "OFF"
+                                  : "--",
+                            r.intakeActive === true
+                                ? "ON"
+                                : r.intakeActive === false
+                                  ? "OFF"
+                                  : "--",
+                            r.ledActive === true
+                                ? "ON"
+                                : r.ledActive === false
+                                  ? "OFF"
+                                  : "--",
+                        );
+
+                    for (const value of values) {
+                        const td = document.createElement("td");
+                        td.textContent = value;
+                        tr.appendChild(td);
+                    }
+
+                    $("historyRows").appendChild(tr);
+                }
+            }
+
+            async function loadHistory() {
+                const requestMode = activeChamber;
+                const serial = ++historyLoadSerial;
+                let start, end;
+
+                try {
+                    [start, end] = getBounds();
+                } catch (err) {
+                    $("historyMessage").textContent = err.message;
+                    return;
+                }
+
+                if (end - start > 93 * 86400000) {
+                    $("historyMessage").textContent =
+                        "Select at most 93 days per query.";
+                    return;
+                }
+
+                $("loadHistory").disabled = true;
+                $("historyMessage").textContent = "Loading...";
+
+                try {
+                    const snap = await db
+                        .ref(chamberPaths[requestMode].history)
+                        .orderByChild("timestamp")
+                        .startAt(start)
+                        .endAt(end - 1)
+                        .once("value");
+
+                    if (
+                        serial !== historyLoadSerial ||
+                        requestMode !== activeChamber
+                    )
+                        return;
+                    historyRecords = Object.entries(snap.val() || {})
+                        .map(([id, r]) => ({ id, ...r }))
+                        .filter(
+                            (r) => r.timestamp >= start && r.timestamp < end,
+                        )
+                        .sort((a, b) => a.timestamp - b.timestamp);
+
+                    $("records").textContent = historyRecords.length;
+
+                    const t = average(
+                        historyRecords,
+                        "temp",
+                        (r) => r.sensorValid === true,
+                    );
+                    const h = average(
+                        historyRecords,
+                        "rh",
+                        (r) => r.sensorValid === true,
+                    );
+                    const c = average(historyRecords, "co2", validCO2);
+
+                    $("avgTemp").textContent =
+                        t === null ? "--" : fmt(t) + "°C";
+                    $("avgRH").textContent = h === null ? "--" : fmt(h) + "%";
+                    $("avgCO2").textContent =
+                        c === null ? "--" : fmt(c, 0) + " ppm";
+
+                    renderHistory();
+
+                    $("historyMessage").textContent =
+                        historyRecords.length + " records loaded.";
+                } catch (err) {
+                    if (serial === historyLoadSerial)
+                        $("historyMessage").textContent =
+                            "History failed: " + err.message;
+                } finally {
+                    if (serial === historyLoadSerial)
+                        $("loadHistory").disabled = false;
+                }
+            }
+
+            $("period").addEventListener("change", () => {
+                const custom = $("period").value === "custom";
+
+                $("anchorDate").classList.toggle("hidden", custom);
+                $("fromDate").classList.toggle("hidden", !custom);
+                $("toDate").classList.toggle("hidden", !custom);
+            });
+
+            $("loadHistory").addEventListener("click", loadHistory);
+
+            $("exportCSV").addEventListener("click", () => {
+                if (!historyRecords.length) {
+                    alert("Load historical data first.");
+                    return;
+                }
+
+                const baseHeadings = [
+                    "Timestamp PHT",
+                    "Timestamp ms",
+                    "Temperature C",
+                    "RH Percent",
+                    "CO2 ppm",
+                    "SCD40 Temperature C",
+                    "SCD40 RH Percent",
+                    "SHT31 Valid",
+                    "SCD40 Valid",
+                ];
+                const automatedHeadings = [
+                    "Scenario",
+                    "Exhaust Demand",
+                    "Intake Demand",
+                    "Mist Demand",
+                    "Exhaust Output",
+                    "Intake Output",
+                    "LED Output",
+                ];
+                const headings =
+                    activeChamber === "automated"
+                        ? [...baseHeadings, ...automatedHeadings]
+                        : baseHeadings;
+                const rows = historyRecords.map((r) => {
+                    const base = [
+                        pht(r.timestamp),
+                        r.timestamp,
+                        r.sensorValid ? r.temp : "",
+                        r.sensorValid ? r.rh : "",
+                        validCO2(r) ? r.co2 : "",
+                        validCO2(r) ? r.scdTemp : "",
+                        validCO2(r) ? r.scdRH : "",
+                        r.sensorValid,
+                        r.co2Valid,
+                    ];
+                    return activeChamber === "automated"
+                        ? [
+                              ...base,
+                              r.scenario,
+                              r.exhaustDemand,
+                              r.intakeDemand,
+                              r.mistDemand,
+                              r.exhaustActive,
+                              r.intakeActive,
+                              r.ledActive,
+                          ]
+                        : base;
+                });
+
+                const escape = (v) =>
+                    '"' + String(v ?? "").replaceAll('"', '""') + '"';
+
+                const csv = [headings, ...rows]
+                    .map((row) => row.map(escape).join(","))
+                    .join("\r\n");
+
+                const url = URL.createObjectURL(
+                    new Blob([csv], { type: "text/csv;charset=utf-8" }),
+                );
+
+                const link = document.createElement("a");
+                link.href = url;
+                link.download =
+                    (activeChamber === "automated"
+                        ? "Automated"
+                        : "Traditional") + "_MicroChamber_History.csv";
+                link.click();
+
+                URL.revokeObjectURL(url);
+            });
+
+            // Initialization
+            const today = dayString();
+
+            $("anchorDate").value = today;
+            $("fromDate").value = today;
+            $("toDate").value = today;
+
+            switchChamber("automated");
+        </script>
+    </body>
+</html>
