@@ -404,7 +404,7 @@
                     <h2>Current Environmental Demand</h2>
 
                     <div class="scenario">
-                        <div class="eyebrow">Environment Condition</div>
+                        <div class="eyebrow">Environmental Condition</div>
                         <strong id="scenario">--</strong>
                         <p id="rationale">Waiting for sensor readings</p>
                     </div>
@@ -996,12 +996,12 @@
                 });
                 $("historyHeading").textContent =
                     mode === "automated"
-                        ? "Automated Chamber Historical Data"
-                        : "Traditional Chamber Historical Data";
+                        ? "Experimental Setup Historical Data"
+                        : "Control Setup Historical Data";
                 $("recentHeading").textContent =
                     mode === "automated"
-                        ? "Recent Automated Measurements"
-                        : "Recent Traditional Measurements";
+                        ? "Recent Measurements"
+                        : "Recent Measurements";
                 historyRecords = [];
                 $("historyRows").replaceChildren();
                 $("records").textContent = "0";
